@@ -186,3 +186,184 @@ Once celected, click OK and the tap v on the layout window and you should see th
 
 ![image](https://user-images.githubusercontent.com/43104014/129261783-b118bdc5-469a-4aa2-a666-f8a3ae8495a5.png)
 
+Clearly, the schematic is unable to do analog placement and routing which is an extremely complex process. Hence, here we have to do it ourselves. It is not necessary to do this in the most optimal way since our goal here is just to get a working layout. Select cells by hovering over them and pressing i. Move them to a new location by hovering over the point you want the bottom left corner of the cell to be and pressing m. Once you move the cells around you should have a layout like this.
+
+<img width="960" alt="magic" src="https://user-images.githubusercontent.com/43104014/129313801-2fcc18f6-4a3f-4be7-9563-fadbc1d57290.png">
+
+Select the pfet device using i and press ctrl+p to open the parameters window. Find the options for "Source via coverage", "Drain via coverage" and "Top guard ring via coverage" and set them all as per the following:
+
+![image](https://user-images.githubusercontent.com/43104014/129316965-ef31d278-73b5-4b46-9fa2-b35e40f810ae.png)
+
+Similarly,for the nfet carry out the similar steps, only changing the bottom guard ring instead of the top. Now using the box tool and the wire connect tool that can be obtained by scrolling through the pointers by pressing space (looks like an arrow) make and fill in the connections on the layout.
+
+![image](https://user-images.githubusercontent.com/43104014/129330410-c0a6d72d-d1f2-486d-b0d4-98dd2ef7ffa0.png)
+
+Now, go to File --> save and select autowrite. We're not done yet. Go to the command window and type the following:  
+
+```extract do local```  
+```extract all```
+
+Extract do local is an instruction to perform all extractions to the local directory and extract all does the actual extraction. We want our extraction for lvs to be in the spice format, so run the following commands.  
+
+```ext2spice lvs```  
+```ext2spice```  
+
+Now, we can close magic.  
+If we run an ```ls``` in this directory we should see our .ext files and .mag files for the devices. In case there are extra devices we can run the following commands to remove all unused .ext files.  
+
+```console
+avnish@pv-workshop-final-03:~/inverter/mag$ ls
+inverter.ext	sky130_fd_pr__nfet_01v8_B9CQBZ.ext  sky130_fd_pr__pfet_01v8_KG2LE3.mag
+inverter.mag	sky130_fd_pr__nfet_01v8_B9CQBZ.mag  sky130_fd_pr__pfet_01v8_U3KX2J.ext
+inverter.spice	sky130_fd_pr__nfet_01v8_N39HBR.mag  sky130_fd_pr__pfet_01v8_U3KX2J.mag
+avnish@pv-workshop-final-03:~/inverter/mag$ rm *.ext
+avnish@pv-workshop-final-03:~/inverter/mag$ ls -al
+total 32
+drwxrwxr-x 2 avnish avnish 4096 Aug 13 08:52 .
+drwxrwxr-x 5 avnish avnish 4096 Aug 12 15:36 ..
+lrwxrwxrwx 1 avnish avnish   54 Aug 12 17:27 .magicrc -> /usr/share/pdk/sky130A/libs.tech/magic/sky130A.magicrc
+lrwxrwxrwx 1 avnish avnish   53 Aug 12 15:41 .magicrc.old -> usr/share/pdk/sky130A/libs.tech/magic/sky130A.magicrc
+-rw-rw-r-- 1 avnish avnish 1461 Aug 13 08:45 inverter.mag
+-rw-rw-r-- 1 avnish avnish 1242 Aug 13 08:49 inverter.spice
+-rw-rw-r-- 1 avnish avnish 3596 Aug 13 08:45 sky130_fd_pr__nfet_01v8_B9CQBZ.mag
+-rw-rw-r-- 1 avnish avnish 3508 Aug 13 08:45 sky130_fd_pr__nfet_01v8_N39HBR.mag
+-rw-rw-r-- 1 avnish avnish 3365 Aug 13 08:45 sky130_fd_pr__pfet_01v8_KG2LE3.mag
+-rw-rw-r-- 1 avnish avnish 3463 Aug 13 08:45 sky130_fd_pr__pfet_01v8_U3KX2J.mag
+avnish@pv-workshop-final-03:~/inverter/mag$ /usr/share/pdk/bin/cleanup_unref.py -remove .
+Removed unused parameterized cell sky130_fd_pr__nfet_01v8_N39HBR
+Removed unused parameterized cell sky130_fd_pr__pfet_01v8_KG2LE3
+
+Done!
+avnish@pv-workshop-final-03:~/inverter/mag$ S
+```  
+Now we are ready to run LVS. Move to the netgen folder and run the following:  
+
+```netgen -batch lvs "../mag/inverter.spice inverter" "../xschem/inverter.spice inverter"```  
+
+If everything is correct so far, the comparison will show the netlists to be identical.
+
+![image](https://user-images.githubusercontent.com/43104014/129341322-bea64297-502e-4694-a248-dfe7b79ee055.png)
+
+Here we see there are some mismatches which we will learn to fix in the upcoming sections.
+
+### Day 2: Introduction to DRC and LVS
+Fundamentals of physical verification:-  
+Physical verification is the barrier between physical design and design failure. The goal of physical verification is to check for any potential design errors that may inhibit proper functioning or even lead to a denial of manufacturing by the foundry. Verious tools are used to be able to confirm and validate correct electrical and logical functionality and even manufacturability. Verification involves numerous steps such as: 
+
+* Design Rule Check (DRC)
+* Layout vs Schematic (LVS)
+* XOR
+* Antenna Checks
+* Electrical Rule Check
+
+The two most important ones are: 
+* Design Rule Check:  
+Making sure that the design layout meets all the necessary silicon foundry specifications for manufacturing the mask.
+* Layout vs Schematic:  
+Making sure the extracted netlist from a design layout matches one from a simulatable schematic by checking electrical connectivity and devices.
+
+Modern LVS in verification works by comparing the netlists, one starting from an initial schematic described by an RTL (Verilog/VHDL) and then running through synthesis, and the other one moving backwards from the completed layout, back to the extraction to obtain a netlist for comparison. Some popular open source tools for the same are:  
+
+![image](https://user-images.githubusercontent.com/43104014/129353999-7d9202c1-4ba3-41ba-b6b4-15592c964a06.png)
+
+#### The GDS Format
+The Graphic Design System (GDS), more popularised by its successor, GDSII is a database file format which is the most widely used and preferred format for mask manufacturing foundries. It is a binary file format denoting geometric shapes, text labels, and other information about the layout in hierarchical form. This data is widely divided into:
+1. Data (Rectangles, Polygons, Subcells)
+2. Metadata (Labels, Cell names, Instance names)  
+
+#### Extraction and Netlists
+Extraction is the process of generating a netlist from an existing integrated circuit layout that it is meant to represent. Extraction in the magic layout editor is a fairly straightforward process, in which, in two steps, magic generates an intermediate form of its own devising called .ext and this is then converted into a more well known format such as .spice for further use.  
+
+![image](https://user-images.githubusercontent.com/43104014/129372306-509f7126-54bc-4992-ac75-db4668ca8151.png)
+
+The first step is the most complicated part of the process, which creates a file (.ext) that enumerates all electrical nets in the layout, all devices and instances used within that cell, all the common subcells as well as the paracitic capacitances between nets in the layout. The second step simply gathers all information from the .ext file and lists it in a known format like .spice. The commands used for said extraction are:  
+
+```extract do local```  -Saves to local directory
+```extract all```       -Actual extraction
+```ext2spice lvs```     -Sets options for running LVS
+```ext2spice```         -Converts .ext files to .spice netlist
+
+#### DRC Rules in Magic
+Magic has a veature in that it runs an idle DRC engine process which allows for interactive DRC. It shows this by indiciating a white stripple pattern on the part of the layout where the DRC violation has occurred. Magic is smart with running its DRC checks, such that it only rechecks the parts of the layout that have been most recently changed. However, if a large change such as movement of the pad frame occurs, magic runs checks on the entire layout again and this can take a long time for large layouts.
+
+Fig: Shows spacing error in Magic
+![image](https://user-images.githubusercontent.com/43104014/129389520-9f8040d4-792f-419b-8635-532dd7f0bcf3.png)
+
+To counter the time issue, we have DRC styles in magic that define the way checks are run in the software. There are three types based on their speed and functionality:  
+* drc(full)  - Runs complete checks [SLOW]
+* drc(fast)  - Runs only typical checks [FAST]
+* drc(routing)  -Runs exclusively metal checks [FASTEST]
+
+DRC can be turned off by entering ```drc off``` in the magic console.
+
+#### LVS in netgen
+The tool we use for LVS here is called netgen. Netgen is a tool for comparing netlists. It does not know anything about layouts, the devices used in them or the processes. All it knows is netlists, how to read and compare them. LVS would be very simple if netlists could be simply compared one-to-one. However this is not always the case as we seenwhen different netlists use different naming schemes, subcircuits or hierarchies. In such cases, a good LVS tool should be able to handle these differing hierarchies to make a fair comparison of the netlists.
+Flattening is a method used when there are differences in hierarchies in order to sort them out to enable fair comparison.
+
+![image](https://user-images.githubusercontent.com/43104014/129393765-94429945-a18e-47cf-b88d-f19adf32eb90.png)
+
+While this is valid in case of hierarchal differences, when there is a single mismatch in a high level hierarchy, it can carry over to the entire system when it is not actually the case.
+
+<img width="367" alt="hier" src="https://user-images.githubusercontent.com/43104014/129394053-0b8c8fd3-95a3-4a57-ae72-415390f77976.png">
+
+Note: Netgen has also a feature to carry out LVV (Layout vs Verilog).
+
+#### XOR Verification
+There is another form of physical verification that does not get as much attention as DRC or LVS and that is XOR verification. It works on simple principle of the boolean logic XOR. As shown in the venn diagram, it only gives an output when there is a mismatch in the given two inputs.
+
+![image](https://user-images.githubusercontent.com/43104014/129394523-88f83bd8-8331-4c99-8d72-17e402e922c7.png)
+
+In case of making a few small changes to your gds layout, an XOR can be run over the old and new GDS layouts that would output only the part of the layout over which you made changes.
+
+![image](https://user-images.githubusercontent.com/43104014/129394712-3191f6a1-373e-4f05-9165-b485afbeca56.png)
+
+Now with a basic understanding of DRC and LVS as modes of physical verification, we can move to our terminal to carry out some exercises of our own.
+
+First, we need to work on GDS read and therefore styles in magic. Open magic in your workspace and enter ```cif istyle xxx```. The xxx could be anything, but the point is that the output shows the currently enabled style as well as all the available options.
+
+![image](https://user-images.githubusercontent.com/43104014/129398017-06d8c29a-6808-452b-bc9c-9928e9c589be.png)
+
+Now, using the default enabled style let's try a ```gds read``` from our sky130 directory. Type:  
+```gds read /usr/share/pdk/sky130A/libs.ref/sky130_fd_sc_hd/gds/sky130_fd_sc_hd.gds```
+
+![image](https://user-images.githubusercontent.com/43104014/129398362-ca02e874-0f1e-4560-b954-24a51bee3647.png)
+
+Now that the read is completed, select a simple cell from Options --> Cell manager such as and2_1:
+
+![image](https://user-images.githubusercontent.com/43104014/129398742-a9a9bed8-dff2-4e82-9d80-8fe8233909c1.png)
+
+Style: sky130()
+![image](https://user-images.githubusercontent.com/43104014/129398972-926cd245-fa6a-4bc9-b28f-b6dcec07532f.png)
+
+Style: sky130(vendor)
+![image](https://user-images.githubusercontent.com/43104014/129399044-c30d7fd4-8ff5-450d-bf54-512facb3b0bd.png)
+
+Now, to get information about ports, we can select a label (one at a time) and type ```what``` in the console. However selecting a particular label in large layouts is near impossible so, another way to do this is to use ```port first``` to get information about the port indexed by magic as 1.
+
+![image](https://user-images.githubusercontent.com/43104014/129406591-99cd7d1e-b7c2-4002-8b5f-4f3953712eef.png)
+
+As we can see, other than the name, the other fields are labeled as default and this is because GDS file-formats are unable to store metadata and class as well as use come under this type of data. A way to get around this and use vendor metadata to annotate the file is by using ```lef``` as follows:
+
+![image](https://user-images.githubusercontent.com/43104014/129407168-3ec0bfd5-9117-4bd6-89f7-8668e746f4df.png)
+
+Now, running the commands to check port data again, we get
+
+![image](https://user-images.githubusercontent.com/43104014/129407280-82196f2f-3721-4630-ade8-ec2f49590ead.png)
+
+Now, in order to annotate layouts from spice in order to get the right port order, we use:
+
+![image](https://user-images.githubusercontent.com/43104014/129407602-2c4ca48d-e245-4639-9927-f3bb4eb3c1c8.png)
+
+On using that, we load a new and gate from the cell manager
+
+![image](https://user-images.githubusercontent.com/43104014/129407926-085f15ca-ae88-433a-a4e6-a8ea6aa76fbd.png)
+
+And now, on checking the name of port 1, we get A instead of VPWR which is as per the spice annotation.
+
+![image](https://user-images.githubusercontent.com/43104014/129408048-2e2d3087-2aa2-453e-a6e3-2bc9a8e1ebd5.png)
+
+However, this can go wrong in the case of using abstract views. To test this, quit and start a new session of magic. Run the lef read command again and open a new instance of the and2_1 gate from the cell manager. You should see this
+
+![image](https://user-images.githubusercontent.com/43104014/129408479-e9b83a36-78ac-41db-ae2e-9b528930986a.png)
+
+Check the port names and right away we see that port 3 is named X, which is because lef files do not contain port order in the metadata. To fix this, simply run the readspice command from earlier.
