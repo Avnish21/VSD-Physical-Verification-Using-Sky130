@@ -28,8 +28,24 @@ This course aims at bringing a solid understanding of Physical Verification meth
 * Deep N-Well And High Voltage Rules
 * Device Rules
 * Miscellaneous Rules Latch-up Antenna Stress Rules
-#### Day 4: 
-#### Day 5: 
+#### Day 4: PNR and Physical Verification
+* The OpenLANE Flow
+* RTL2GDS For Demo Design
+* Interactive OpenLANE Run
+* Interactive OpenLANE Run - Final Steps
+* Techniques To Avoid Common DRC Errors
+* Techniques To Manually Fix Violations
+#### Day 5: Running LVS
+* Physical Verification Of Extracted Netlist
+* How LVS Matching Works
+* LVS Netllist Vs Simulation Netlists
+* The Netgen Core Matching Algorithm
+* Netgen Prematch Analysis, Hierarchical Checking And Flattening
+* Pin Checking And Property Checking
+* Series Parallel Combining
+* Symmetry Breaking
+* Interpreting Netgen Results
+
 
 ### Day 1: Introduction to Sky130 PDK
 The SkyWater PDK is a collaboration between Google and SkyWater Technology Foundry to provide a fully open source Process Design Kit (PDK), making it possible for the first time, to work off libraries and setups for open source tools build around a real manufacturable process, which can be used to facricate real designs at SkyWater's facility. As of May 2020, this repository is targeting the SKY130 process node, 130 denoting the minimum feature length (length of the smallest manufacturable transistor in the process) of 130 nanometers.
@@ -415,3 +431,97 @@ ext2spice
 The next sections will teach us how to perform DRC and LVS as well as XOR checks with our extracted netlists.
 
 ### Day 3: Fundamentals of DRC
+In electronics engineering, a design rule is a geometric constraint imposed on circuit board, semiconductor device, and integrated circuit designers to ensure their designs work reliably and can be produced with acceptable yield. Design Rule Check (DRC) checks whether a specific design meets the constraints imposed by the foundry in question as per their process technology. DRC checking is an essential part of the physical design flow and ensures the design meets manufacturing requirements and will not result in a chip failure. A DRC failure will result in the design being rejected by the manufacturing foundry. The following is a discussion on the multiple DRC rules.
+
+1. Backend Metal Layer Rules:
+  * Width rule -  If a material is too thin, a large enough spot defect can cause a break in the material, thus resulting in an open circuit. The width rule defines the minimum width to be maintained for a feature in the layout.
+  * Spacing rule - If 2 wires are close together, a simple defect in the mask or the material can cause them to short together. The spacing rule defines the minimum spacing to be maintained between separate features in a layout.
+  * Minimum/Maximum area rules - These rules are defined to control the via resistance and optimize contact between layers.
+  * Contact Cut (Via) Rules - Contact cuts are metal connections between two stacked layers in a layout. These rules define the specifications for these connections in the design.
+  
+2. Local Interconnect Rules:
+  * Aspect ratio of __uncontacted__ local interconnect > 1:10
+
+3. Frontend Rules:
+  * Device-specific rules - Frontend rules are those that directly influence devices and are usually more complex than backend rules. These rules are device-specific, however the designer need not worry about these rules since the PDK includes an automatic parameterized device generator that generates devices that satisfy all device rules.
+  * Wells and Taps - The placement of wells and taps is the task with the highest complexity for the designer. These are regions of complementary doping to that of the transistor it surrounds, for example, a pfet device would sit inside of an n-well.
+  * Same-net spacing - These define the minimum spacing between the same nets in a layout and require the checker to identify the connections between these nets that in magic, are generally n wells.
+
+4. High Voltage Rules:
+  * Any device that is subjected to a voltage outside the range of GND to Vcc is considered a high voltage device. These devices are subjected to special design rules and biasing conditions. For example, transistor gates for high voltage must be both, wider and longer
+
+5. Device rules:
+  * Resistors - Resistors can be of two types, diffusion and poly resistors. The diffusion resistors require a paracitic diode from resistor to n well. Poly resistors have specifications for contact cuts for example square or rectangular contacts. Mostly, the inbuilt device builder creates resistor devices.
+  * Capacitors - Capacitors are of 4 major types namely, Varactors, MOScap capacitors, MiM capacitors and Vertical Parallel Plate capacitors. All these variants have their own design rule specifications.
+  * Diodes - These are formed by the pn junction between diffusion and well. They follow DRC rules for diffusion tap and well.
+  * Fixed layout devices - These devices are considered DRC valid by design and only require attention to the spacing rules between them. The designer can simply instantiate the predefined cells without worrying about DRC rules.
+
+6. Miscellaneous DRC Rules:
+  * Off grid errors
+  * Angle limitations
+  * Seal ring rules
+  * Latchup rules
+  * Antenna rules
+  * Stress Rules (Mechanical Damage)  
+These miscellaneous rules are defined within the skywater pdk documentation under the [x category](https://skywater-pdk.readthedocs.io/en/latest/rules/periphery.html#x).
+
+7. Density Rules:
+When metal layers are anufactured, one of the steps in the process is physical polishing of the fill layers in order to grind down the surface and attain a uniform flatness.
+
+![image](https://user-images.githubusercontent.com/43104014/129456676-47f432c3-fe36-4b4b-b28f-980e17aa1fa1.png)
+
+![image](https://user-images.githubusercontent.com/43104014/129456682-c575746e-301c-4fd0-a2fc-400e6e32470f.png)
+
+Generally, automated tools are used to generate fill patterns and there is one such provision in magic itself. 
+
+8. Recommended, Manufacturing & ERC Rules:
+  * Use redundant vias (RR)
+  * Width, spacing, area, overlap, extension, angle, density rules (MR)
+  * Electrical Rule Checks (ERC) are rules that there are no cases where the layout is DRC correct but has scertain failures that would cause electrical problems, for example, overvoltage and electromigration.
+
+Now, we can move on to testing and implementing these rules for an actual layout.
+
+Start by cloning the following git repository:  
+```git clone https://github.com/RTimothyEdwards/vsd_drc_lab.git```  
+cd into the lab folder and run ```./run_magic``` in the command line to start magic.
+
+From file, open exercise1 which should open a .mag layout containing 4 types of DRC violations as shown
+
+![image](https://user-images.githubusercontent.com/43104014/129457235-83fd8421-1ab3-43e7-9564-5eb20af930fc.png)
+
+Zoom into the first violation and put the cursor box around the error area. From the drc menu select report or simply press ? on the keyboard. The following report should show up in the console:
+
+![image](https://user-images.githubusercontent.com/43104014/129457304-23eb3672-a849-45ef-8470-82a6e31f2f80.png)
+
+The way to fix this is to increase the width of the metal2 segment upto or aabove the required 0.14um. To do this, set your cursor box around the area and use the middle mouse key to paint the entire area within the box with metal 2.
+
+![image](https://user-images.githubusercontent.com/43104014/129457675-30b8b9b9-9297-41c4-a2fb-02a4564e79da.png)
+
+The error now vanishes. Similarly, for the spacing wrror we need to fix the spacing by moving one of the components by selecting and usi g the arrow keys to move.
+
+![image](https://user-images.githubusercontent.com/43104014/129457723-6358d7fe-5b10-4156-b495-52de451d56b6.png)
+
+The third error is an asymmetrical spacing error and is solved in the same way
+
+![image](https://user-images.githubusercontent.com/43104014/129457762-51527183-631d-496b-a702-8188cf420b64.png)
+
+The fourth error is solved by selecting half the figure and stretching it away from the notch using Shift+arrow key on numpad.
+
+![image](https://user-images.githubusercontent.com/43104014/129457943-e48c37ce-ea45-4e8f-8198-539285e27681.png)
+
+Next, go to file and open exercise 2. This one is all about vias and the violations they throw. The first one is simply solved by stretching to the side and then vertically.
+
+![image](https://user-images.githubusercontent.com/43104014/129458200-af264c86-f541-4f69-9e9e-d3007faf0b24.png)
+
+The second one is an area on which contact cuts will be drawn onto by the algorithm. To see the cuts, type ```cif see MCON``` after boxing the figure within your cursor box and you should see this
+
+![image](https://user-images.githubusercontent.com/43104014/129458443-ba5b0b67-d79a-47d9-9ad0-24dcd67d56ff.png)
+
+The third is a simple case of overlapping vias and the way to solve this is to surround the point with the desired width of metal1 (0.03um) and then by an additional 0.06um padding either horizontally or vertically. The result should look like this:
+
+![image](https://user-images.githubusercontent.com/43104014/129458747-f3291dfa-60bb-40e9-8d49-930dc2efd02c.png)
+
+The last part of this exercise shows us auto generation of vias on a strip of metal by selecting the area and running cif see MCON and cif see VIA1 and so on till 5.
+
+![image](https://user-images.githubusercontent.com/43104014/129458847-7dedfa61-8c39-4ac2-860a-02a8e8e0583c.png)
+
