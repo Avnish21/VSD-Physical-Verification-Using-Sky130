@@ -366,4 +366,52 @@ However, this can go wrong in the case of using abstract views. To test this, qu
 
 ![image](https://user-images.githubusercontent.com/43104014/129408479-e9b83a36-78ac-41db-ae2e-9b528930986a.png)
 
-Check the port names and right away we see that port 3 is named X, which is because lef files do not contain port order in the metadata. To fix this, simply run the readspice command from earlier.
+Check the port names and right away we see that port 3 is named X, which is because lef files do not contain port order in the metadata. To fix this, simply run the readspice command from earlier. 
+
+ ![image](https://user-images.githubusercontent.com/43104014/129444245-09711809-ed31-4013-817b-f1461447df95.png)
+
+However, a point to remember about abstract views is that they aren't exact representations of the layout. If you load an abstract view into a layout, you get an incomplete (abstract) view. To see this, create a new file, load the same and2_1 cell and you should see the same abstract view. Save this and write to gds. Note the error message:
+
+![image](https://user-images.githubusercontent.com/43104014/129444923-1909e97c-4baf-4c50-b321-f84f330746a4.png)
+
+On restarting magic and reading gds, we see something odd
+
+![image](https://user-images.githubusercontent.com/43104014/129444949-97bb05fd-49c2-4471-84cb-aaf66bfbf38c.png)
+
+This is because abstreact files aren't supposed to be written to gds and this all comes down to metada. Lef files only know about 2 metals: pins and obstructions. Any metal that is not a pin disappears from the gds file. 
+
+#### Extraction
+Extraction is the process of generating a netlist from an existing layout. To perform basic extraction, open magic and load the sky130_fd_sc_hd__and2_1 gate and run:
+
+```console
+extract all
+ext2spice lvs
+ext2spice
+```
+![image](https://user-images.githubusercontent.com/43104014/129446910-718504a8-1797-4900-be10-b8dfc90b35a5.png)
+
+As we can see, the netlist magic just confirmed is the same as the one in the PDK, with 6 devices (fets), each being a subcircuit call. Some other options for extraction are:  
+
+1. Parasitic capacitance extraction  
+```console
+ext2spice cthresh <threshold>
+```
+
+2. Resistance extraction
+```console
+ext2sim labels on
+ext2sim
+extresist tolerance 10
+extresist
+```
+
+3. RX Extraction
+```console
+ext2spice lvs 
+ext2spice cthresh 0.01
+ext2spice extresist on
+ext2spice
+```
+The next sections will teach us how to perform DRC and LVS as well as XOR checks with our extracted netlists.
+
+### Day 3: Fundamentals of DRC
