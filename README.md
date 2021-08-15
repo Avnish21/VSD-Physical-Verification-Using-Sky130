@@ -625,8 +625,6 @@ This is to be combined with the original, so once again load exercise 11 and run
 
 Once combined, your fill layer is completed and it should satisfy all density rules. Run checks using the console to ```cif``` see particular layers and look for any possible errors. 
 
-### Day 4: OpenLane Flow
-
 ### Day 5: Running LVS
 Layout vs Schematic (LVS) and Design Rule Checking (DRC) are the two most important verification procedures before a chip design is sent to the foundry for manufacturing. However, as compared to DRC, a chip that fails LVS will pass the foundry checks and go into manufacturing, but stands at a risk of returning as a non-working chip.
 
@@ -687,3 +685,133 @@ This provides a number of reports:
 * Failing partitions dump
 
 The runtime output we see here is simply a summary of the entire LVS comparison process and should not be completely relied upon. The ```comp.out``` file contains the full detailed report of the comparison and contains all the information from the runtime output and more.
+
+Let's now perform some LVS experiments in Netgen and get a hands-on idea on how the tool works
+
+Starting very simple, lets consider 2 netlists with exactly the same nets and devices, only differing in the first line that is a comment.
+
+![image](https://user-images.githubusercontent.com/43104014/129482961-0687c1c5-4a09-448a-b77f-4822a100e851.png)
+
+On starting netgen and running lvs using the command ```lvs netA.spice netB.spice``` we get the following output
+
+![image](https://user-images.githubusercontent.com/43104014/129483022-7ff0eeb8-21e1-4a0b-a492-0c5eb3b00bcc.png)
+
+Now, as we know the details about the comparison lie in the comp.out file, so reading that we see
+
+![image](https://user-images.githubusercontent.com/43104014/129483184-e61a2b61-32cb-43ec-a8fd-9b60d558beee.png)
+
+There isn't much to learn from 2 netlists that are identical, so let's edit the first pin pf cell 3 in netA.spice from "C" to "B"
+
+![image](https://user-images.githubusercontent.com/43104014/129483306-028779d9-1fa9-419c-8973-d560d4c9cb61.png)
+
+This report clearly shows us the instances where the mismatches occur, which pins and which nets are missing from which cells in either of the two nets.  
+
+Next, we see an example of LVS with subcircuits
+
+![image](https://user-images.githubusercontent.com/43104014/129483554-90e188a2-c7ec-4c28-8bd3-a6c6e584c5e4.png)
+
+On running LVS with netgen, we see:
+
+![image](https://user-images.githubusercontent.com/43104014/129483597-808ee58a-c318-48e8-879e-06304cab7a29.png)
+
+Which makes sense, since the two netlists do not include subcircuit calls, but only definitions. This means there are no circuit level components on the top level of the netlists and thus, nothing for netgen to compare. However, it is possible to specify to netgen which subcircuits in the netlist to compare in order to get a valid LVS check.
+
+![image](https://user-images.githubusercontent.com/43104014/129484953-455e7700-9a8a-4c9c-bebf-507f942f87a2.png)
+![image](https://user-images.githubusercontent.com/43104014/129484960-c4f1b3f7-b7a0-462f-a8fd-5c8ec389caa1.png)
+![image](https://user-images.githubusercontent.com/43104014/129485021-9d94e3b9-e888-49e3-b3b1-71da619792ee.png)
+
+In the next case, we deal with blackbox cells, netlist A and B being:
+
+![image](https://user-images.githubusercontent.com/43104014/129485124-b74bf7e7-9319-4552-91d4-a800bd1877a4.png)
+
+Running lvs on these two netlists gives the following result:
+
+![image](https://user-images.githubusercontent.com/43104014/129485500-a7cc084c-4b2d-4a03-9217-2a0d0803335c.png)
+
+The main difference here we see is that it prints information about each of the subcells. If we edit the netA.spice, changing the pins on cell1 from {A B C} to {C B A} and run lvs again,
+
+![image](https://user-images.githubusercontent.com/43104014/129485600-3be40690-0bef-4e75-a804-abcf0d09d504.png)
+
+Now, changing the pins on cell1 to {A B D} we see
+
+![image](https://user-images.githubusercontent.com/43104014/129485642-21c6daf3-e961-4987-89fc-a7459c72b344.png)
+
+The comp.out file shows:
+
+![image](https://user-images.githubusercontent.com/43104014/129485669-5883e894-9c51-4a89-9a5f-a9e33b03f546.png)
+
+Now, let's look at LVS with low-level spice components. Here we have netA.spice and netB.spice as:
+
+![image](https://user-images.githubusercontent.com/43104014/129485831-9b1299af-c5b6-4168-bffe-e67f2572397e.png)
+
+![image](https://user-images.githubusercontent.com/43104014/129485839-886f5660-a706-4d33-9e26-e2494f7408ed.png)
+
+Running lvs on this gives us a pass, saying that the netlists match uniquely. Now since we have resistors, if we swap pins on the resis tor we should get the same output right?
+
+![image](https://user-images.githubusercontent.com/43104014/129485926-83a4bd5b-0754-4897-add9-574549595847.png)
+
+This time round, we fail lvs, because we need to specifically tell netgen that we can swap pins A and C using the ```permute``` command. At the end of the setuo.tcl file, append:
+
+```console
+permute "circuit1 cell1" A C
+permute "circuit2 cell1" A C
+```
+
+This tells netgen that these pins are permutable and now on running lvs, we get
+
+![image](https://user-images.githubusercontent.com/43104014/129486294-53f24cab-6fc4-412b-ad62-ab9b3a729ecd.png)
+
+Which finally passes LVS. Doing the same for a diode, while also flipping the diode, since it is not symmetrical also results in an LVS pass.
+
+Next, we can move on to LVS on an actual circuit, in this case, a power on reset circuit. The xschem schematic of the same looks like this:
+
+![image](https://user-images.githubusercontent.com/43104014/129486572-b7224554-eca5-4df2-af3d-6f143ca67a38.png)
+
+From simulation menu, enable the option: "LVS netlist: top lvl is a .subckt" and tap netlist. This should generate a .spice file. Next, open magic and extract. Now, running lvs on these two netlists, we get a mismatch
+
+![image](https://user-images.githubusercontent.com/43104014/129486954-ba27458b-46ee-496f-a00d-19571f82cd0f.png)
+
+This is because we do not have the subcircuit definitions for the files. On running lvs for the wrapper we get a net match but a pin mismatch. The reason for this can be pinpointed by opening the weapper subcircuit in magic and finding that ip_analog[4] pin in the layout is tied to io_clamp_high[0]. This is fixed by replacing the bridge between the two nets with a resistor of type rmetal3 to separate the cells.
+
+![image](https://user-images.githubusercontent.com/43104014/129487735-ff504043-fa89-43cd-8234-eb085436882a.png)
+
+Now, extract the new netlist by using the extract commands and re-run lvs. This as expected, shows a problem since the device count in the layout netlist has changed, so the same change has to be made in xschem.
+
+![image](https://user-images.githubusercontent.com/43104014/129487797-00e12687-9832-4f03-8e75-6c99a25d72ba.png)
+
+Once again, set the top level circuit to be output, save the netlist and re-run  lvs. Now, you should see 9 pin mismatches. These can again be pinpointed on the layout to be shorted to vssa1 and vssd1 and need resistors added to separate the two nets. Similarly, adding resistors in xschem and then finally comparing the two netlists will make it LVS clean.
+
+Next, we will see how to run layout vs verilog (LVV). First, we extract the schematic from our layout, which is a digital pll cell:
+
+![image](https://user-images.githubusercontent.com/43104014/129487986-0e69c32a-5af2-46c1-8a6e-ecf2720c49bd.png)
+
+However this throws a huge LVS mismatch
+
+![image](https://user-images.githubusercontent.com/43104014/129488041-a71c7179-b0de-44ea-8e32-ed35ea91778e.png)
+
+This is caused because there exists a net in the layout which because of having no primitive devices connected or having any other connections, only serves as a parasitic and therefore is completely optimized out of spice. This is fixed by adding the following line in the run lvs command:
+
+```export MAGIC_EXT_USE_GDS=1```
+
+This time, we get a match!
+
+![image](https://user-images.githubusercontent.com/43104014/129488232-05f83572-c536-4179-9c60-a17ea9c5d7fe.png)
+
+Lastly, we can do an LVS check in a case with property errors. Generate netlists from layout as well as schematic:
+
+![image](https://user-images.githubusercontent.com/43104014/129488682-98ab0cf4-9d28-426f-a201-acf51b1ae809.png)
+
+And then run lvs
+
+![image](https://user-images.githubusercontent.com/43104014/129488690-42ebbefa-ca2f-44ea-9f69-85096c57aa10.png)
+
+Here, clearly we see property errors in the netlists, namely in the MEMcap capacitors and in the resistors. Once the changes are applied to the schematic and a new netllist is extracted, the LVS is passed! With that the last activity of this course and the course itself comes to an end.
+
+### Acknowledgement:
+I wish to acknowledge the help provided by Mr.Kunal Ghosh, Mr. Tim Edwards for guiding me through the course and helping me understand the concepts. I also show my gratitude to the entire team of VSD for hosting the workshop. I also thank Ms. Sai Charan, Mr. Manjunath R V, Mr. Anmol Purty for the kind support.
+
+### REFERENCES
+
+https://www.vlsisystemdesign.com/?v=a98eef2a3105
+
+https://vsdiat.com/
