@@ -625,6 +625,42 @@ This is to be combined with the original, so once again load exercise 11 and run
 
 Once combined, your fill layer is completed and it should satisfy all density rules. Run checks using the console to ```cif``` see particular layers and look for any possible errors. 
 
+### Day 4: OpenLane Flow
+OpenLane is an automated RTL to GDSII flow based on several components including OpenROAD, Yosys, Magic, Netgen, Fault and custom methodology scripts for design exploration and optimization. It s a tape-out-hardened flow that addresses two main use cases: hardening a macro and integrating a System-on-a-Chip (SoC).
+
+#### OpenLane Flow Stages:
+* Synthesis
+RTL is converted to Gate level representation Tools used for this synthesis are:
+  1. Yosys – RTL synthesis
+  2. ABC – Technology mapping
+
+* Static Timing Analysis:
+OpenSTA performs static timing analysis on the product netlist using ideal clocks to generate the timing report.
+
+* Floorplanning:
+Involves various physical design flow stages such as floorplanning, powergrid distribution and network generation.
+
+* Placement
+Involves placement of various cells, macros as well as the essential stage of clock-tree synthesis.
+
+* Routing
+The FastRoute tool performs fill insertion for routing.
+
+* Antenna diode insertion
+Antenna diode insertion stage is necessary to DRC violations related to antenna, as seen previously.
+
+* Parasitic (RC) extraction
+Performed by Magic after which, another STA stage follows.
+
+* Physical Verification
+Physical verification, as this course demonstrates is performed using Magic, Klayout, Netgen, CVC.
+
+GDSII is streamed out by Magic and Klayout. Klayout GDSII streamed from def file and used as a backup.
+
+The Openlane flow can be run in one of two ways:
+* Non interactive method: Involves a prewritten script such as a shell script to run all the aforementioned processes. This method requires no manual work but is also hard to intervene.
+* Interactive method: As the name suggests, involves manually running each and every stage and making spontaneous changes in the process parameters as and when required.
+
 ### Day 5: Running LVS
 Layout vs Schematic (LVS) and Design Rule Checking (DRC) are the two most important verification procedures before a chip design is sent to the foundry for manufacturing. However, as compared to DRC, a chip that fails LVS will pass the foundry checks and go into manufacturing, but stands at a risk of returning as a non-working chip.
 
