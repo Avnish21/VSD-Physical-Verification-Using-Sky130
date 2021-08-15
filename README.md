@@ -525,3 +525,165 @@ The last part of this exercise shows us auto generation of vias on a strip of me
 
 ![image](https://user-images.githubusercontent.com/43104014/129458847-7dedfa61-8c39-4ac2-860a-02a8e8e0583c.png)
 
+Now, loading exercise 3 from the file menu, we see the next 2 types of DRC violations, minimum area and hole rules. These are simply fixed by increasing the area and in the first case above the minimum requirement as seen by pressing the ? key on selection.
+
+![image](https://user-images.githubusercontent.com/43104014/129467729-74e75427-4052-4a3e-a9e7-3bdd70299345.png)
+
+![image](https://user-images.githubusercontent.com/43104014/129467753-c887d186-417c-4fa9-a470-4ac088eb79eb.png)
+
+The minimum hole rule doesn't show an error since minimum hole rules are compute expensive and since the DRC style is not on complete by default, we neeed to switch the style and run DRC check.
+
+![image](https://user-images.githubusercontent.com/43104014/129467812-e89bef7e-b14c-467a-8b78-4daecd34e5af.png)
+
+This is easily fixable by erasing some more metal fom the center to make the hole larger
+
+![image](https://user-images.githubusercontent.com/43104014/129467824-bc7ab9d1-34a8-4449-8f6d-e7378e7b004e.png)
+
+Next, open exercise 4 from the file menu and move to 4.a. This error deals with wells and since sky130 does't usually deal with p-wells, the p-well shown here is just seen as a p substrate and does not throw an error. The first error in the n well is that it should be connected to metal as an n-tap. Firstly we need to paint some nsubstratendiff into n-well. Next, it needs to be connected to a valid potential (nsubstratencontact). Post this, fix all overlap errors as done before by stretching and finally, extend the local interconnect along one axis to eliminate all the errors and get this
+
+![image](https://user-images.githubusercontent.com/43104014/129468237-e5a8d47e-e10d-4dd3-9512-e0e74d972bb2.png)
+
+In exercise 4b the problem is similarly fixed, but instead of n, we choose p substrate for the contact. In 4.c we deal with deep n-wells and on a query we are met with multiple errors, firstly a spacing error that says n-wells must be a certain distance away from each other and since the n-well in 4.c interacts with the one in 4.b we have this problem. Secondly, we need a ring of n-well around the hole for the p-substrate. Lastly, we need a contact like we have made before and on completing all the steps we may eliminate all DRC errors.
+
+<img width="960" alt="nwell" src="https://user-images.githubusercontent.com/43104014/129468875-d46d33b7-04cd-424f-b141-5a8d2ac7c150.png">
+
+Now, open exercise 5 to move on to derived layers. In 5.a we see the center of the drawn figure, what seems to be a transistor is labeled as nmoslvt and not nmos. However if we draw another transistor below, the same intersection is now labeled as nmos and we have to specifically select nmoslvt to fill the center with that.
+
+![image](https://user-images.githubusercontent.com/43104014/129468963-9b91b39b-33d2-4a8d-96b7-ea07c230a548.png)
+
+Next, in 5b we see a similar scenario but with the high voltage counterpart
+
+![image](https://user-images.githubusercontent.com/43104014/129469270-ff064bf8-73fb-4fdd-9062-0737babda27a.png)
+
+In 5.c we see poly contacts which require a special type. Not an implant, but a layer etch instead called Nitride PolyCut (NPC). NPC etches through any residue on the poly to ensure a firmer contact between the poly and local interconnect. Use ```cif see NPC``` to see the details about the Nitride Polycut layer.
+
+![image](https://user-images.githubusercontent.com/43104014/129469435-650c15c6-f2c2-4aa7-85af-afc4f009c8e4.png)
+
+Moving on, exercise 6 shows few empty squares with errors but on selecting them and expanding using "x" , we are able to see that these cells are in reality, parametrized cells. Zooming in on the first device shows an nfet with DRC errors and these errors occur because the metal 1 minimum area is not met. The reason this error exists is because connections are going to be made to these contact points anyways, which would fix the error. Putting metal 1 on the top and bottom contacts solves this.
+
+![image](https://user-images.githubusercontent.com/43104014/129471681-3315e044-76fe-49c3-a79e-2f64b2656c71.png)
+
+On to 6.b, we see an ESD fet. The error exists in the angled transistor gate edges. This layout in in reality, known good but the rule is too complex to be described by the DRC engine. These errors are solved by simply removing the angled edges of polysilicon by selecting and using the command ```erase poly``` in the console. A similar situation exists in 6.c where some errors are related to the angled edges and others are atatched to the existence of a deep n-well. This n-well is not really necessary since there are other ways to represent an isolated substrate.
+
+![image](https://user-images.githubusercontent.com/43104014/129471984-dbd1034a-5a02-445e-aa2c-960050fadd3d.png)
+
+Exercise 7.a represents off grid errors which result from angled lines intersecting at a point that does not meet in the grid of minimum dimensions specified by the manufacturing process.
+
+![image](https://user-images.githubusercontent.com/43104014/129472129-5a379162-0738-408e-8e69-5a6b30d2bb61.png)
+
+To solve this, we simply select one of the figures and move it by 1 unit.
+
+<img width="480" alt="7a" src="https://user-images.githubusercontent.com/43104014/129472278-78c357a4-b7e5-46f6-a2b6-7159711f230f.png">
+
+In 7.b, the angled edge simply needs to be eliminated by filling in.
+
+![image](https://user-images.githubusercontent.com/43104014/129472299-aab79952-b6ad-4b0e-87f4-9b910bc4be7a.png)
+
+7.c is a simple case of the angle not meeting the permitted values. the dimensions of the sides of the triangle are 201x200 which means the angle is not exactly 45 degrees. This is easily sorted by deleting the area and then using the ```splitpaint sw m1``` command.
+
+<img width="960" alt="7b" src="https://user-images.githubusercontent.com/43104014/129472433-edcffe9b-adcf-4ede-bc6a-ee49e90e7439.png">
+
+7.d shows an orverlap rule violation since they layers aren't really overlapping, but are in different cells. To fix this simply paint poly over the overlap area and delete the subcell fom the bottom layer. 7.e is an overlap violation in the case of overlapping cells where the contacts aren't in exact overap. ```cif see VIA2``` is used to make the vias visible.
+
+![image](https://user-images.githubusercontent.com/43104014/129472828-81b770b0-4f14-4042-9a64-8d8fad11327c.png)
+
+In the second case, the contact is made with the use of 2 horizontal overlapping cells where the square contacts aren't in exact overlap and it throws a violation. Select one and move the cell untill they overlap exactly and the error disappears.
+
+![image](https://user-images.githubusercontent.com/43104014/129473209-bae99af3-3f6f-4739-96fb-20c150a765c4.png)
+
+Exercise 9 demonstrates antenna rules. On expanding and querying, we get the following violation report:
+
+![image](https://user-images.githubusercontent.com/43104014/129473843-5926ff11-aa79-4155-826e-5700b0b43b4b.png)
+
+The latchup rule is so designed that the well and the substrate are pegged well enough that they won't vary from their expected voltage and cause trouble. This is a standard cell and is automatically handled by the PnR tools.
+
+Exercise 10 moves away from magic's DRC engine and looks at electrical rule checks, specifically the antenna rule check. The first step in any ERC check is to extract a netlist, since to do electrical checks we need to have a knowledge of the circuit. Once extracted, run the antenna check commands as follows to obtain the error messages:
+
+![image](https://user-images.githubusercontent.com/43104014/129474206-2b998c06-2dd4-4a8f-b1b1-fe443159e5f9.png)
+
+There are 2 ways to solve antenna violations, the first being to tie down the route to a diffusion, which is a diode. If the feedback says the error is at plane metal 2, you have to connect anywhere to the highlighted metal down to the diffusion. On making this connection using the wiring tool, re-extracting (this step is necessary since the layout has been changed) and re running antennacheck shows no error. 
+
+![image](https://user-images.githubusercontent.com/43104014/129475729-7568ee91-0ff8-4e5e-b1af-063466d8092e.png)
+
+Exercise 11 deals with density checks. Metal 1 is a thin ring around the boundary and is thus underdensity and metal 2 is onversely, overdensity. The command to check density is ```cif cover MET1``` with MET2 for metal 2. Density rules are generally defined in smaller areas stepped in x and y and the density has to be satisfied in each of those areas so that it is covered across the whole chip and is thus performed by a density script. Firstly, write the file to gds and then, in a new terminal, cd to the workspace folder and run the following command:  
+
+```/usr/share/pdk/sky130A/libs.tech/magic/check_density.py exercise_11.gds```
+
+![image](https://user-images.githubusercontent.com/43104014/129476237-a308d502-1d46-4991-a791-5c89090e6653.png)
+
+To deal with all the errors, there is another script called generate_fill.py which is run as follows
+
+![image](https://user-images.githubusercontent.com/43104014/129476357-de898127-1023-4763-8239-c176a76af4fa.png)
+
+The output of the file is a .gds file and can be loaded into magic using ```gds read exercise_11_fill_pattern``` 
+
+![image](https://user-images.githubusercontent.com/43104014/129476398-536794b4-9e57-419a-809f-aafedcb35a5e.png)
+
+This is to be combined with the original, so once again load exercise 11 and run the following:
+
+![image](https://user-images.githubusercontent.com/43104014/129476449-2c735d10-96d0-4b21-9f2e-d19f6fc53874.png)
+
+Once combined, your fill layer is completed and it should satisfy all density rules. Run checks using the console to ```cif``` see particular layers and look for any possible errors. 
+
+### Day 4: OpenLane Flow
+
+### Day 5: Running LVS
+Layout vs Schematic (LVS) and Design Rule Checking (DRC) are the two most important verification procedures before a chip design is sent to the foundry for manufacturing. However, as compared to DRC, a chip that fails LVS will pass the foundry checks and go into manufacturing, but stands at a risk of returning as a non-working chip.
+
+![image](https://user-images.githubusercontent.com/43104014/129476888-4cee43d6-d696-4cb7-b5d2-46e2a5ad812e.png)
+
+LVS tools have one major drawback in that, even though they are very good at pointing out when netlists do match, when they don't, they cannot accurately pinoint the reason, which usually entails a long cycle of trial and error before the design engineer is able to pass LVS.  
+
+The very first step in LVS is preparation, in which it converts the two files, the layout and schematic into netlists, usually of a popular format such as SPICE. Other formats are:  
+* LEF/DEF
+* Verilog
+* BLIF
+
+This repository will focus on the LVS testing using SPICE formats, starting from schematics. When dealing with schematics in LVS there are a lot of rules about what to do and what not to do, all of which are underlined in the IO library [sky130_fd_io](https://skywater-pdk.readthedocs.io/en/latest/contents/libraries.html#io-and-periphery-libraries).  
+It is important to underline and understand the difference between a netlist for LVS and a netlist for simulation. While both cases consider devices in design, when it comes to parameters, an LVS netlist only includes basic parameters (W,L) whereas simulation netlists consider ALL parameters, including parasitic capacitances and even resistances if needed. In an LVS netlist, all nets in the design are included, whereas in a simulation netlist, all nets are rewired around parasitics. Parasitic capacitances do not have too much of an effect on simulation runtime but parasitic resistances can slow a simulation down significantly.  
+
+Netgen is a tool used for LVS testing and comparison and can be run from its console which is a Tcl/tk interpreter. Netgen commands can be run in batch mode and the syntax to run LVS in netgen is:  
+
+```netgen -batch lvs "file1 circuit1" "file2 circuit2" setup_file output_file```
+
+#### The Netgen LVS process:
+The Netgen algorithm works in a number of steps as follows:
+* Start with 2 netlists in lets say, SPICE formats.
+* First iteration: Create a list of devices and a list of nets from both netlists
+* Second iteration: Works through each device in the list of devices, assigning a number called hash (#) and each pin, a pin number which is a hash of the pin name.
+* Third iteration: Generates a new hash number for every net based on the connections which is the result of the hash numbers of the pins it is connected to.
+* Fourth iteration: Runs through all the devices, giving them a new hash number based on the nets that its pins are connected to.
+* Fifth iteration: Creates 2 lists, one of nets and one of devices with the same hash number, called partitions.  
+
+This whole process is repeated for every partition untill ideally there are as many partitions containing a pair of nets or devices as there are nets or devices. If this condition occurs, the netlists match.
+
+Some other processes that occur in LVS are pin matching and property checking. Pin matching is the process of identifying two differently labelled pins as the same equivalent if they have the same electrical connections. For example, in a NOT gate if you label input A and output B and in they layout you name input X and output Y, the LVS checker should be able to identify them the same despite the difference in nomenclature. Property checking is the process of matching device property while running LVS such as width and length of a transistor. 2 transistors may have identical electrical connections but if they are completely different transistors, the LVS check should not pass. Netgen has some acceptable values by which parameter values can differ and still be considered matching since no teo transistors are completely identical.
+
+#### Combinations in Netgen: Series/Parallel:
+The way series or parallel connections are made in schematics and/or layouts can differ and LVS should be able to see 2 equivalent combinations as the same before declaring them a mismatch! The general combination rules followed by Netgen LVS are:  
+
+1. Transistors combine in parallel
+  * For same l, transistors can combine to a parallel W by adding
+
+2. Capacitors combine in parallel
+  * Parallel devices can be merged by adding area
+
+3. Resistors combine in series or parallel
+  * For same W: Series  l can merge by adding
+  * For same W: Parallel l can merge by parallel sum
+
+#### Interpreting LVS results:
+Netgen provides a side-by-side comparison layout of the 2 netlists entered as arguments to the LVS command, labeled as circuit 1 and circuit 2, one being the netlist extracted from the layout and the other from the schematic. 
+
+![image](https://user-images.githubusercontent.com/43104014/129482508-ad6fc5ed-3e0d-420f-ad90-49f3f5bee9b4.png)
+
+This provides a number of reports:
+* Series/Parallel merging report
+* Side-by-side report of cell contents
+* Pre-match analysis report
+* Topology matching report
+* Property matching report
+* Pin matching report
+* Failing partitions dump
+
+The runtime output we see here is simply a summary of the entire LVS comparison process and should not be completely relied upon. The ```comp.out``` file contains the full detailed report of the comparison and contains all the information from the runtime output and more.
